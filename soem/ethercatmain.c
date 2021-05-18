@@ -1003,7 +1003,7 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
    int wkc=0;
    int wkc2 = 1;
    uint16 SMstat;
-   uint8 SMcontr;
+   // uint8 SMcontr;
    ec_mbxheadert *mbxh;
    ec_emcyt *EMp;
    ec_mbxerrort *MBXEp;
