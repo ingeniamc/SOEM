@@ -745,7 +745,7 @@ int ecx_readstate(ecx_contextt *context)
    {
       noerrorflag = TRUE;
       context->slavelist[0].ALstatuscode = 0;
-   }   
+   }
    else
    {
       noerrorflag = FALSE;
@@ -765,7 +765,7 @@ int ecx_readstate(ecx_contextt *context)
          allslavessamestate = FALSE;
          break;
    }
-    
+
    if (noerrorflag && allslavessamestate && allslavespresent)
    {
       /* No slave has toggled the error flag so the alstatuscode
@@ -818,7 +818,7 @@ int ecx_readstate(ecx_contextt *context)
       } while (lslave < *(context->slavecount));
       context->slavelist[0].state = lowest;
    }
-  
+
    return lowest;
 }
 
@@ -1001,7 +1001,7 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
 {
    uint16 mbxro,mbxl,configadr;
    int wkc=0;
-   int wkc2;
+   int wkc2 = 1;
    uint16 SMstat;
    uint8 SMcontr;
    ec_mbxheadert *mbxh;
@@ -1066,32 +1066,33 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
                      {
                         /* Fragment handled by EoE hook */
                         wkc = 0;
+                        wkc2 = 0;
                      }
                   }
                }
             }
             else
             {
-               if (wkc <= 0) /* read mailbox lost */
-               {
-                  SMstat ^= 0x0200; /* toggle repeat request */
-                  SMstat = htoes(SMstat);
-                  wkc2 = ecx_FPWR(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
-                  SMstat = etohs(SMstat);
-                  do /* wait for toggle ack */
-                  {
-                     wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1CONTR, sizeof(SMcontr), &SMcontr, EC_TIMEOUTRET);
-                   } while (((wkc2 <= 0) || ((SMcontr & 0x02) != (HI_BYTE(SMstat) & 0x02))) && (osal_timer_is_expired(&timer) == FALSE));
-                  do /* wait for read mailbox available */
-                  {
-                     wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
-                     SMstat = etohs(SMstat);
-                     if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
-                     {
-                        osal_usleep(EC_LOCALDELAY);
-                     }
-                  } while (((wkc2 <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
-               }
+               // if (wkc <= 0) /* read mailbox lost */
+               // {
+               //    SMstat ^= 0x0200; /* toggle repeat request */
+               //    SMstat = htoes(SMstat);
+               //    wkc2 = ecx_FPWR(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+               //    SMstat = etohs(SMstat);
+               //    do /* wait for toggle ack */
+               //    {
+               //       wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1CONTR, sizeof(SMcontr), &SMcontr, EC_TIMEOUTRET);
+               //     } while (((wkc2 <= 0) || ((SMcontr & 0x02) != (HI_BYTE(SMstat) & 0x02))) && (osal_timer_is_expired(&timer) == FALSE));
+               //    do /* wait for read mailbox available */
+               //    {
+               //       wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+               //       SMstat = etohs(SMstat);
+               //       if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
+               //       {
+               //          osal_usleep(EC_LOCALDELAY);
+               //       }
+               //    } while (((wkc2 <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
+               // }
             }
          } while ((wkc <= 0) && (osal_timer_is_expired(&timer) == FALSE)); /* if WKC<=0 repeat */
       }
@@ -1101,7 +1102,9 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
             wkc = EC_TIMEOUT;
       }
    }
-
+   if (wkc2 == 0) {
+      wkc = 0;
+   }
    return wkc;
 }
 
@@ -1671,9 +1674,9 @@ static int ecx_pullindex(ecx_contextt *context)
    return rval;
 }
 
-/** 
+/**
  * Clear the idx stack.
- * 
+ *
  * @param context           = context struct
  */
 static void ecx_clearindex(ecx_contextt *context)  {
@@ -1730,7 +1733,7 @@ static int ecx_main_send_processdata(ecx_contextt *context, uint8 group, boolean
       length = context->grouplist[group].Obytes + context->grouplist[group].Ibytes;
       iomapinputoffset = 0;
    }
-   
+
    LogAdr = context->grouplist[group].logstartaddr;
    if(length)
    {
@@ -1853,11 +1856,11 @@ static int ecx_main_send_processdata(ecx_contextt *context, uint8 group, boolean
             /* send frame */
             ecx_outframe_red(context->port, idx);
             /* push index and data pointer on stack.
-             * the iomapinputoffset compensate for where the inputs are stored 
+             * the iomapinputoffset compensate for where the inputs are stored
              * in the IOmap if we use an overlapping IOmap. If a regular IOmap
              * is used it should always be 0.
              */
-            ecx_pushindex(context, idx, (data + iomapinputoffset), sublength, DCO);      
+            ecx_pushindex(context, idx, (data + iomapinputoffset), sublength, DCO);
             length -= sublength;
             LogAdr += sublength;
             data += sublength;
