@@ -1003,7 +1003,7 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
    int wkc=0;
    int wkc2 = 1;
    uint16 SMstat;
-   // uint8 SMcontr;
+   uint8 SMcontr;
    ec_mbxheadert *mbxh;
    ec_emcyt *EMp;
    ec_mbxerrort *MBXEp;
@@ -1073,26 +1073,26 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
             }
             else
             {
-               // if (wkc <= 0) /* read mailbox lost */
-               // {
-               //    SMstat ^= 0x0200; /* toggle repeat request */
-               //    SMstat = htoes(SMstat);
-               //    wkc2 = ecx_FPWR(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
-               //    SMstat = etohs(SMstat);
-               //    do /* wait for toggle ack */
-               //    {
-               //       wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1CONTR, sizeof(SMcontr), &SMcontr, EC_TIMEOUTRET);
-               //     } while (((wkc2 <= 0) || ((SMcontr & 0x02) != (HI_BYTE(SMstat) & 0x02))) && (osal_timer_is_expired(&timer) == FALSE));
-               //    do /* wait for read mailbox available */
-               //    {
-               //       wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
-               //       SMstat = etohs(SMstat);
-               //       if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
-               //       {
-               //          osal_usleep(EC_LOCALDELAY);
-               //       }
-               //    } while (((wkc2 <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
-               // }
+               if (wkc <= 0) /* read mailbox lost */
+               {
+                  SMstat ^= 0x0200; /* toggle repeat request */
+                  SMstat = htoes(SMstat);
+                  wkc2 = ecx_FPWR(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+                  SMstat = etohs(SMstat);
+                  do /* wait for toggle ack */
+                  {
+                     wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1CONTR, sizeof(SMcontr), &SMcontr, EC_TIMEOUTRET);
+                   } while (((wkc2 <= 0) || ((SMcontr & 0x02) != (HI_BYTE(SMstat) & 0x02))) && (osal_timer_is_expired(&timer) == FALSE));
+                  do /* wait for read mailbox available */
+                  {
+                     wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+                     SMstat = etohs(SMstat);
+                     if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
+                     {
+                        osal_usleep(EC_LOCALDELAY);
+                     }
+                  } while (((wkc2 <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
+               }
             }
          } while ((wkc <= 0) && (osal_timer_is_expired(&timer) == FALSE)); /* if WKC<=0 repeat */
       }
