@@ -104,7 +104,7 @@ int ecx_FOEread(ecx_contextt *context, uint16 slave, char *filename, uint32 pass
    /* copy filename in mailbox */
    memcpy(&FOEp->FileName[0], filename, fnsize);
    /* send FoE request to slave */
-   wkc = ecx_mbxsend(context, slave, (ec_mbxbuft *)&MbxOut, EC_TIMEOUTTXM);
+   wkc = ecx_mbxsend(context, slave, (ec_mbxbuft *)&MbxOut, 700000);
    if (wkc > 0) /* succeeded to place mailbox in slave ? */
    {
       do
@@ -142,7 +142,7 @@ int ecx_FOEread(ecx_contextt *context, uint16 slave, char *filename, uint32 pass
                      FOEp->OpCode = ECT_FOE_ACK;
                      FOEp->PacketNumber = htoel(packetnumber);
                      /* send FoE ack to slave */
-                     wkc = ecx_mbxsend(context, slave, (ec_mbxbuft *)&MbxOut, EC_TIMEOUTTXM);
+                     wkc = ecx_mbxsend(context, slave, (ec_mbxbuft *)&MbxOut, 700000);
                      if (wkc <= 0)
                      {
                         worktodo = FALSE;
@@ -291,8 +291,8 @@ int ecx_FOEwrite(ecx_contextt *context, uint16 slave, char *filename, uint32 pas
                            /* send FoE data to slave */
                            wkc = ecx_mbxsend(context, slave, (ec_mbxbuft *)&MbxOut, EC_TIMEOUTTXM);
                            if (wkc <= 0)
-                           {
-                              worktodo = FALSE;
+						   {
+								worktodo = FALSE;
                            }
                         }
                      }
