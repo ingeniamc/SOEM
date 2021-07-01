@@ -996,6 +996,125 @@ int ecx_mbxsend(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeou
  * @param[in]  timeout    = Timeout in us
  * @return Work counter (>0 is success)
  */
+int ecx_mbxreceive_foe(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeout)
+{
+   uint16 mbxro,mbxl,configadr;
+   int wkc=0;
+   int wkc2 = 1;
+   uint16 SMstat;
+   uint8 SMcontr;
+   ec_mbxheadert *mbxh;
+   ec_emcyt *EMp;
+   ec_mbxerrort *MBXEp;
+
+   configadr = context->slavelist[slave].configadr;
+   mbxl = context->slavelist[slave].mbx_rl;
+   if ((mbxl > 0) && (mbxl <= EC_MAXMBX))
+   {
+      osal_timert timer;
+
+      osal_timer_start(&timer, timeout);
+      wkc = 0;
+      do /* wait for read mailbox available */
+      {
+         SMstat = 0;
+         wkc = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+         SMstat = etohs(SMstat);
+         if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
+         {
+            osal_usleep(EC_LOCALDELAY);
+         }
+      }
+      while (((wkc <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
+
+      if ((wkc > 0) && ((SMstat & 0x08) > 0)) /* read mailbox available ? */
+      {
+         mbxro = context->slavelist[slave].mbx_ro;
+         mbxh = (ec_mbxheadert *)mbx;
+         do
+         {
+            wkc = ecx_FPRD(context->port, configadr, mbxro, mbxl, mbx, EC_TIMEOUTRET); /* get mailbox */
+            if ((wkc > 0) && ((mbxh->mbxtype & 0x0f) == 0x00)) /* Mailbox error response? */
+            {
+               MBXEp = (ec_mbxerrort *)mbx;
+               ecx_mbxerror(context, slave, etohs(MBXEp->Detail));
+               wkc = 0; /* prevent emergency to cascade up, it is already handled. */
+            }
+            else if ((wkc > 0) && ((mbxh->mbxtype & 0x0f) == ECT_MBXT_COE)) /* CoE response? */
+            {
+               EMp = (ec_emcyt *)mbx;
+               if ((etohs(EMp->CANOpen) >> 12) == 0x01) /* Emergency request? */
+               {
+                  ecx_mbxemergencyerror(context, slave, etohs(EMp->ErrorCode), EMp->ErrorReg,
+                          EMp->bData, etohs(EMp->w1), etohs(EMp->w2));
+                  wkc = 0; /* prevent emergency to cascade up, it is already handled. */
+               }
+            }
+            else if ((wkc > 0) && ((mbxh->mbxtype & 0x0f) == ECT_MBXT_EOE)) /* EoE response? */
+            {
+               ec_EOEt * eoembx = (ec_EOEt *)mbx;
+               uint16 frameinfo1 = etohs(eoembx->frameinfo1);
+               /* All non fragment data frame types are expected to be handled by
+               * slave send/receive API if the EoE hook is set
+               */
+               if (EOE_HDR_FRAME_TYPE_GET(frameinfo1) == EOE_FRAG_DATA)
+               {
+                  if (context->EOEhook)
+                  {
+                     if (context->EOEhook(context, slave, eoembx) > 0)
+                     {
+                        /* Fragment handled by EoE hook */
+                        wkc = 0;
+                        wkc2 = 0;
+                     }
+                  }
+               }
+            }
+            else
+            {
+               if (wkc <= 0) /* read mailbox lost */
+               {
+                  SMstat ^= 0x0200; /* toggle repeat request */
+                  SMstat = htoes(SMstat);
+                  wkc2 = ecx_FPWR(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+                  SMstat = etohs(SMstat);
+                  do /* wait for toggle ack */
+                  {
+                     wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1CONTR, sizeof(SMcontr), &SMcontr, EC_TIMEOUTRET);
+                   } while (((wkc2 <= 0) || ((SMcontr & 0x02) != (HI_BYTE(SMstat) & 0x02))) && (osal_timer_is_expired(&timer) == FALSE));
+                  do /* wait for read mailbox available */
+                  {
+                     wkc2 = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+                     SMstat = etohs(SMstat);
+                     if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
+                     {
+                        osal_usleep(EC_LOCALDELAY);
+                     }
+                  } while (((wkc2 <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
+               }
+            }
+         } while ((wkc <= 0) && (osal_timer_is_expired(&timer) == FALSE)); /* if WKC<=0 repeat */
+      }
+      else /* no read mailbox available */
+      {
+         if (wkc > 0)
+            wkc = EC_TIMEOUT;
+      }
+   }
+   if (wkc2 == 0) {
+      wkc = 0;
+   }
+   return wkc;
+}
+
+/** Read OUT mailbox from slave.
+ * Supports Mailbox Link Layer with repeat requests.
+ * @param[in]  context    = context struct
+ * @param[in]  slave      = Slave number
+ * @param[out] mbx        = Mailbox data
+ * @param[in]  timeout    = Timeout in us
+ * @return Work counter (>0 is success)
+ */
 int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeout)
 {
 	uint16 mbxro, mbxl, configadr;
@@ -1089,7 +1208,7 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
 					 }
                    } while (((wkc <= 0)));
 				   SMact ^= 0x02; /* toggle repeat request */
-                  
+
                   wkc = ecx_FPWR(context->port, configadr, ECT_REG_SM1ACT, sizeof(SMact), &SMact, EC_TIMEOUTRET);
                   do /* wait for toggle ack */
                   {
