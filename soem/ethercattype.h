@@ -73,7 +73,7 @@ extern "C"
 /** timeout value in us for rx mailbox cycle */
 #define EC_TIMEOUTRXM      20000
 /** timeout value in us for check statechange */
-#define EC_TIMEOUTSTATE    2000000
+#define EC_TIMEOUTSTATE    5000000
 /** size of EEPROM bitmap cache */
 #define EC_MAXEEPBITMAP    128
 /** size of EEPROM cache buffer */
