@@ -61,7 +61,7 @@ extern "C"
 /** number of frame buffers per channel (tx, rx1 rx2) */
 #define EC_MAXBUF          16
 /** timeout value in us for tx frame to return to rx */
-#define EC_TIMEOUTRET      2000
+#define EC_TIMEOUTRET      200000
 /** timeout value in us for safe data transfer, max. triple retry */
 #define EC_TIMEOUTRET3     (EC_TIMEOUTRET * 3)
 /** timeout value in us for return "safe" variant (f.e. wireless) */
@@ -71,7 +71,7 @@ extern "C"
 /** timeout value in us for tx mailbox cycle */
 #define EC_TIMEOUTTXM      20000
 /** timeout value in us for rx mailbox cycle */
-#define EC_TIMEOUTRXM      20000
+#define EC_TIMEOUTRXM      500000
 /** timeout value in us for check statechange */
 #define EC_TIMEOUTSTATE    5000000
 /** size of EEPROM bitmap cache */
