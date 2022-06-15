@@ -1119,7 +1119,6 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
 {
 	uint16 mbxro, mbxl, configadr;
 	int wkc = 0;
-	int wkc2 = 1;
 	uint8 SMstat;
 	uint8 SMact;
 	uint8 SMcontr;
@@ -1190,7 +1189,6 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
                      {
                         /* Fragment handled by EoE hook */
                         wkc = 0;
-						/*wkc2 = 0;*/
                      }
                   }
                }
@@ -1246,9 +1244,6 @@ int ecx_mbxreceive(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int tim
             wkc = EC_TIMEOUT;
       }
    }
-   /*if (wkc2 == 0) {
-      wkc = 0;
-   }*/
    return wkc;
 }
 
