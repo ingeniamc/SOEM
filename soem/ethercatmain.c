@@ -990,6 +990,41 @@ int ecx_mbxsend(ecx_contextt *context, uint16 slave,ec_mbxbuft *mbx, int timeout
    return wkc;
 }
 
+int ecx_mbxavailable(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeout)
+{
+   uint16 mbxl, configadr;
+   uint16 SMstat = 0;
+   osal_timert timer;
+   int wkc = 0;
+
+   configadr = context->slavelist[slave].configadr;
+   mbxl = context->slavelist[slave].mbx_rl;
+
+   if ((mbxl > 0) && (mbxl <= EC_MAXMBX))
+   {
+      osal_timer_start(&timer, timeout);
+
+      do /* wait for read mailbox available */
+      {
+         SMstat = 0;
+         wkc = ecx_FPRD(context->port, configadr, ECT_REG_SM1STAT, sizeof(SMstat), &SMstat, EC_TIMEOUTRET);
+         SMstat = etohs(SMstat);
+         if (((SMstat & 0x08) == 0) && (timeout > EC_LOCALDELAY))
+         {
+            osal_usleep(EC_LOCALDELAY);
+         }
+      }
+      while (((wkc <= 0) || ((SMstat & 0x08) == 0)) && (osal_timer_is_expired(&timer) == FALSE));
+   }
+
+   if ((SMstat & 0x08) == 0)
+   {
+      wkc = EC_TIMEOUT;
+   }
+
+   return wkc;
+}
+
 /** Read OUT mailbox from slave.
  * Supports Mailbox Link Layer with repeat requests.
  * @param[in]  context    = context struct
