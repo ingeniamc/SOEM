@@ -990,7 +990,7 @@ int ecx_mbxsend(ecx_contextt *context, uint16 slave,ec_mbxbuft *mbx, int timeout
    return wkc;
 }
 
-int ecx_mbxavailable(ecx_contextt *context, uint16 slave, ec_mbxbuft *mbx, int timeout)
+int ecx_mbxavailable(ecx_contextt *context, uint16 slave, int timeout)
 {
    uint16 mbxl, configadr;
    uint16 SMstat = 0;
